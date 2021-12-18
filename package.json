@@ -37,12 +37,12 @@
     "ws": "^7.4.3"
   },
   "scripts": {
-    "start": "NODE_ENV=dev node src/server/app.js",
-    "build": "NODE_ENV=prod webpack --config config/webpack.config.js",
+    "start": "cross-env NODE_ENV=dev node src/server/app.js",
+    "build": "cross-env NODE_ENV=prod webpack --config config/webpack.config.js",
     "start-client": "webpack serve --config config/webpack.config.js",
-    "start-dev": "NODE_ENV=dev nodemon src/server/app.js",
+    "start-dev": "cross-env NODE_ENV=dev nodemon src/server/app.js",
     "format": "npx prettier --write .",
-    "deploy": "NODE_ENV=prod node src/server/app.js"
+    "deploy": "cross-env NODE_ENV=prod node src/server/app.js"
   },
   "browserslist": {
     "production": [
@@ -63,6 +63,7 @@
     "@pmmmwh/react-refresh-webpack-plugin": "^0.4.3",
     "babel-loader": "^8.2.2",
     "clean-webpack-plugin": "^3.0.0",
+    "cross-env": "^7.0.3",
     "css-loader": "^5.0.1",
     "eslint-config-airbnb": "^18.2.1",
     "eslint-config-prettier": "^6.15.0",

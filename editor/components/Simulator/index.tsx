@@ -1,31 +1,39 @@
-import React, { useLayoutEffect, useEffect } from "react";
-// states and actions
-import { useReactiveVar } from "@apollo/client";
-import { reactiveState } from "core/state";
-// controller instance
-import controller from "./Controller";
+import React, { useState, useEffect } from "react";
+// redux
+import { useSelector } from "react-redux";
+// actions
+import { selectGlobal } from "../../slices/globalSlice";
+// my-class
+import Controller from "./controller";
+// useSelector
 
 /**
  * This is Display component
+ *
  * @component
  */
-const Simulator: React.FC = ({}) => {
-  useLayoutEffect(() => {
-    controller.init();
-    const currentStatus = reactiveState.currentStatus();
-    const currentPos = reactiveState.currentPos();
-    controller.updateDancersStatus(currentStatus);
-    controller.updateDancersPos(currentPos);
+
+export default function Simulator() {
+  const { currentStatus, currentPos } = useSelector(selectGlobal);
+  const [controller, setController] = useState(null);
+
+  useEffect(() => {
+    const newController = new Controller();
+    newController.init();
+    setController(newController);
   }, []);
 
-  const isPlaying = useReactiveVar(reactiveState.isPlaying);
   useEffect(() => {
-    if (isPlaying) {
-      controller.play();
-    } else {
-      controller.stop();
+    if (controller) {
+      controller.updateDancersStatus(currentStatus);
     }
-  }, [isPlaying]);
+  }, [controller, currentStatus]);
+
+  useEffect(() => {
+    if (controller) {
+      controller.updateDancersPos(currentPos);
+    }
+  }, [controller, currentPos]);
 
   return (
     <div
@@ -47,5 +55,4 @@ const Simulator: React.FC = ({}) => {
       </div>
     </div>
   );
-};
-export default Simulator;
+}

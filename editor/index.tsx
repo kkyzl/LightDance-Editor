@@ -1,30 +1,22 @@
+import React from "react";
 import ReactDOM from "react-dom";
 import { Provider } from "react-redux";
 import store from "./store";
-// apollo
-import client from "./client";
 
 // test for websocket
-import WebSocketContext from "./contexts/WebSocketContext";
-import WaveSurferAppContext from "./contexts/WavesurferContext";
-import LayoutContextProvider from "./contexts/LayoutContext";
+import WebSocketContext from "./contexts/webSocketContext";
+import WaveSurferAppContext from "./contexts/wavesurferContext";
 
 import App from "./app";
 
-import { ApolloProvider } from "@apollo/client";
-
 const Index = () => (
-  <ApolloProvider client={client}>
+  <Provider store={store}>
     <WebSocketContext>
       <WaveSurferAppContext>
-        <Provider store={store}>
-          <LayoutContextProvider>
-            <App />
-          </LayoutContextProvider>
-        </Provider>
+        <App />
       </WaveSurferAppContext>
     </WebSocketContext>
-  </ApolloProvider>
+  </Provider>
 );
 
 ReactDOM.render(<Index />, document.getElementById("app"));

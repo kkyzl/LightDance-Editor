@@ -1,102 +1,63 @@
-import React, { useEffect, useContext, useState } from "react";
-import { useSelector } from "react-redux";
+import { useEffect, useContext, useLayoutEffect } from "react";
+import { useResizeDetector } from "react-resize-detector";
 
 // mui
-import Button from "@material-ui/core/Button";
-import PlayArrowIcon from "@material-ui/icons/PlayArrow";
-import PauseIcon from "@material-ui/icons/Pause";
-import StopIcon from "@material-ui/icons/Stop";
-import LoopIcon from "@material-ui/icons/Loop";
-
-// my class
-import WaveSurferApp from "./waveSurferApp";
-import Setting from "./timeline";
-// selector
-import { selectGlobal } from "../../slices/globalSlice";
-import { selectCommand } from "../../slices/commandSlice";
-// constants
-import { WAVESURFERAPP } from "../../constants";
+import Stack from "@mui/material/Stack";
+// components
+import ControlBar from "../ControlBar";
 // contexts
-import { WaveSurferAppContext } from "../../contexts/wavesurferContext";
+import { WaveSurferAppContext } from "../../contexts/WavesurferContext";
+// types
+import { wavesurferContext } from "types/components/wavesurfer";
+// hooks
+import useControl from "../../hooks/useControl";
 
 /**
  *
- * This is Wave component
+ * This is the Wave component
  * @component
  */
-const Wavesurfer = () => {
-  const { waveSurferApp, initWaveSurferApp } = useContext(WaveSurferAppContext);
-  // const [waveSurferApp, setWaveSurferApp] = useState(null);
-  useEffect(() => {
-    const newWaveSurferApp = new WaveSurferApp();
-    newWaveSurferApp.init();
-    initWaveSurferApp(newWaveSurferApp);
+const Wavesurfer = ({ cleanMode = false }) => {
+  const { waveSurferApp, initWaveSurferApp, showMarkers } = useContext(
+    WaveSurferAppContext
+  ) as wavesurferContext;
+
+  const { ref: resizeDetectorRef } = useResizeDetector({
+    onResize: (width, height) => {
+      waveSurferApp.resize();
+    },
+  });
+
+  useLayoutEffect(() => {
+    initWaveSurferApp();
   }, []);
 
-  // redux
-  const {
-    timeData: { from, time },
-  } = useSelector(selectGlobal);
+  const { loading, error, controlMap, controlRecord } = useControl();
 
-  // listen to time set by other component
+  // update Markers
   useEffect(() => {
-    if (waveSurferApp) {
-      if (from !== WAVESURFERAPP) {
-        try {
-          waveSurferApp.seekTo(time);
-        } catch (err) {
-          console.error(err);
-        }
-      }
-    }
-  }, [waveSurferApp, time]);
+    if (!loading && controlMap && showMarkers)
+      waveSurferApp.updateMarkers(controlMap);
+  }, [controlRecord]);
 
-  // event
-  const handlePlayPause = () => waveSurferApp.playPause();
-  const handleStop = () => waveSurferApp.stop();
-  const handlePlayLoop = () => waveSurferApp.playLoop();
+  // update Markers when markers switched on
+  useEffect(() => {
+    if (loading || !controlMap || !waveSurferApp) return;
+    waveSurferApp.toggleMarkers(showMarkers);
+  }, [showMarkers]);
 
   return (
-    <div style={{ height: "100%" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          position: "fixed",
-          marginTop: "6px",
-          width: "100%",
-          zIndex: 10,
-        }}
-      >
-        <div style={{ marginRight: "8px" }}>
-          <Button
-            size="small"
-            variant="text"
-            color="default"
-            onClick={handlePlayPause}
-          >
-            <PlayArrowIcon /> / <PauseIcon />
-          </Button>
-        </div>
-        <Button
-          size="small"
-          variant="text"
-          color="default"
-          onClick={handleStop}
+    <div ref={resizeDetectorRef}>
+      {cleanMode || (
+        <Stack
+          direction="row"
+          justifyContent="space-evenly"
+          alignItems="center"
+          spacing={1}
         >
-          <StopIcon />
-        </Button>
-        <Button
-          size="small"
-          variant="text"
-          color="default"
-          onClick={handlePlayLoop}
-        >
-          <LoopIcon />
-        </Button>
-      </div>
-      <Setting wavesurfer={waveSurferApp} />
+          <ControlBar wavesurfer={waveSurferApp} />
+        </Stack>
+      )}
       <div id="waveform" />
     </div>
   );

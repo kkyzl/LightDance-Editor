@@ -1,36 +1,38 @@
-import React, { useState, useEffect } from "react";
-import { useSelector, useDispatch } from "react-redux";
-
+import { useState } from "react";
+import { useSelector } from "react-redux";
 // mui
-import { makeStyles } from "@material-ui/styles";
-import Button from "@material-ui/core/Button";
-import TextField from "@material-ui/core/TextField";
-import Typography from "@material-ui/core/Typography";
-import Container from "@material-ui/core/Container";
 import Divider from "@material-ui/core/Divider";
 import Switch from "@material-ui/core/Switch";
-import MenuItem from "@material-ui/core/MenuItem";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
+import {
+  Stack,
+  Box,
+  Button,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from "@mui/material";
 
 // write record
-import { posInit, controlInit, selectGlobal } from "../../slices/globalSlice";
+import { selectGlobal } from "../../../slices/globalSlice";
 // select
-import { selectLoad } from "../../slices/loadSlice";
+import { selectLoad } from "../../../slices/loadSlice";
 // utils
-import { setItem, getItem } from "../../utils/localStorage";
+import { setItem, getItem } from "../../../core/utils";
 // api
-import { uploadImages, requestDownload } from "../../api";
+import { uploadImages, requestDownload } from "../../../api";
 // utils
 import {
   downloadEverything,
   checkControlJson,
   checkPosJson,
   uploadJson,
-  downloadControl,
+  downloadControlJson,
   downloadPos,
 } from "./utils";
-
-const useStyles = makeStyles({});
+import { UploadDownload } from "./UploadDownload";
 
 /**
  * Upload and download files
@@ -48,28 +50,31 @@ const useStyles = makeStyles({});
  * |- position.json
  * |- texture.json
  */
-
 export default function File() {
-  const classes = useStyles();
   // upload to server
-  const dispatch = useDispatch();
   const { texture } = useSelector(selectLoad);
-  const { posRecord, controlRecord } = useSelector(selectGlobal);
+  const { posRecord, controlRecord, controlMap } = useSelector(selectGlobal);
   const [toServer, setToServer] = useState(false);
   const [controlRecordFile, setControlRecordFile] = useState(null);
+  const [controlMapFile, setControlMap] = useState(null);
   const [posRecordFile, setPosRecordFile] = useState(null);
+  const [posMapFile, setPosMapFile] = useState(null);
   const [selectedImages, setSelectedImages] = useState(null);
   const [path, setPath] = useState("");
 
   const imagePrefix = Object.values(texture.LEDPARTS)[0].prefix;
 
-  const handlePosInput = (e) => {
-    // checkPosJson(e.target.files);
+  const handlePosRecordInput = (e) => {
     setPosRecordFile(e.target.files);
   };
+  const handlePosMapInput = (e) => {
+    setPosMapFile(e.target.files);
+  };
   const handleControlInput = (e) => {
-    // checkControlJson(e.target.files);
     setControlRecordFile(e.target.files);
+  };
+  const handleControlMapInput = (e) => {
+    setControlMap(e.target.files);
   };
 
   const handleImagesInput = (e) => {
@@ -81,35 +86,43 @@ export default function File() {
   };
 
   const handleControlUpload = async () => {
-    if (controlRecordFile) {
-      const control = await uploadJson(controlRecordFile);
-      if (checkControlJson(control)) {
-        if (
-          window.confirm(
-            "Check Pass! Are you sure to upload new Control file ?"
-          )
-        ) {
-          setItem("control", JSON.stringify(control));
-          dispatch(controlInit(control));
-        }
-      } else alert("Control: Wrong JSON format");
-      // setControlRecordFile(undefined);
+    if (!controlRecordFile || !controlMapFile) {
+      alert("Both controlRecord and controlMap files are required");
+      return;
     }
+    const controlRecord = await uploadJson(controlRecordFile);
+    const controlMap = await uploadJson(controlMapFile);
+    //Todo: check controlMap and controlRecord are matched
+    const { checkPass, errorMessage } = checkControlJson(
+      controlRecord,
+      controlMap
+    );
+    if (checkPass) {
+      if (
+        window.confirm("Check Pass! Are you sure to upload new Control file ?")
+      ) {
+        setItem("controlRecord", JSON.stringify(controlRecord));
+        setItem("controlMap", JSON.stringify(controlMap));
+      }
+    } else alert(errorMessage);
   };
+
   const handlePosUpload = async () => {
-    if (posRecordFile) {
-      const position = await uploadJson(posRecordFile);
-      if (checkPosJson(position)) {
-        if (
-          window.confirm(
-            "Check Pass! Are you sure to upload new Position file?"
-          )
-        )
-          setItem("position", JSON.stringify(position));
-        dispatch(posInit(position));
-      } else alert("Pos: Wrong JSON format");
-      // setPosRecordFile(undefined);
+    if (!posRecordFile || !posMapFile) {
+      alert("Both posRecord and posMap files are required");
+      return;
     }
+    const posRecord = await uploadJson(posRecordFile);
+    const posMap = await uploadJson(posMapFile);
+    const { checkPass, errorMessage } = checkPosJson(posRecord, posMap);
+    if (checkPass) {
+      if (
+        window.confirm("Check Pass! Are you sure to upload new Position file?")
+      ) {
+        setItem("posRecord", JSON.stringify(posRecord));
+        setItem("posMap", JSON.stringify(posMap));
+      }
+    } else alert(errorMessage);
   };
   const handleImagesUpload = async () => {
     if (selectedImages && path) {
@@ -120,7 +133,7 @@ export default function File() {
   };
 
   const handleDownloadControl = () => {
-    downloadControl(controlRecord);
+    downloadControlJson(controlRecord, controlMap);
   };
 
   const handleDownloadPos = () => {
@@ -128,144 +141,158 @@ export default function File() {
   };
 
   const handleDownloadEverything = () => {
-    downloadEverything(controlRecord, posRecord);
+    downloadEverything(controlRecord, controlMap, posRecord);
   };
 
   const handleSwitchServer = () => setToServer(!toServer);
   // TODO: make upload and download functional
   return (
-    <Container>
-      <div>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={toServer}
-              onChange={handleSwitchServer}
-              name="switchServer"
-            />
-          }
-          label="Upload to Server (Don't open this when testing)"
-        />
-        <div>
-          <Typography variant="h6" color="initial">
-            Upload control.json
-          </Typography>
-          <div style={{ display: "flex", alignItems: "normal" }}>
-            <input
-              id="control"
-              name="control"
-              type="file"
-              accept=".json"
-              onChange={handleControlInput}
-            />
-            <Button
-              variant="outlined"
-              color="default"
-              onClick={() => {
-                handleControlUpload();
-              }}
-            >
-              Upload
-            </Button>
-            <Button
-              variant="outlined"
-              color="default"
-              onClick={() => {
-                handleDownloadControl();
-              }}
-            >
-              Download
-            </Button>
-          </div>
-        </div>
-        <div>
-          <Typography variant="h6" color="initial">
-            Upload position.json
-          </Typography>
-          <div style={{ display: "flex", alignItems: "normal" }}>
-            <input
-              id="position"
-              name="position"
-              type="file"
-              accept=".json"
-              onChange={handlePosInput}
-            />
-            <Button
-              variant="outlined"
-              color="default"
-              onClick={() => {
-                handlePosUpload();
-              }}
-            >
-              Upload
-            </Button>
-            <Button
-              variant="outlined"
-              color="default"
-              onClick={() => {
-                handleDownloadPos();
-              }}
-            >
-              Download
-            </Button>
-          </div>
-        </div>
-      </div>
-      <div>
-        <Typography variant="h6" color="initial">
-          Upload [name].png <strong>(should select part)</strong>
-        </Typography>
-        <div style={{ display: "flex", alignItems: "normal" }}>
-          <div>
-            <input
-              id="images"
-              name="images"
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImagesInput}
-            />
-          </div>
+    <Stack spacing={3}>
+      <FormControlLabel
+        control={
+          <Switch
+            checked={toServer}
+            onChange={handleSwitchServer}
+            name="switchServer"
+          />
+        }
+        label="Upload to Server (Don't open this when testing)"
+      />
 
-          <TextField
-            select
+      <Typography variant="h6">Upload control.json</Typography>
+
+      <ItemWrapper>
+        <div>
+          <label htmlFor="control">controlRecord: </label>
+          <input
+            id="control"
+            name="control"
+            type="file"
+            accept=".json"
+            onChange={handleControlInput}
+          />
+        </div>
+        <div>
+          <label htmlFor="controlMap">controlMap: </label>
+          <input
+            id="controlMap"
+            name="controlMap"
+            type="file"
+            accept=".json"
+            onChange={handleControlMapInput}
+          />
+        </div>
+      </ItemWrapper>
+
+      <UploadDownload
+        handleUpload={handleControlUpload}
+        handleDownload={handleDownloadControl}
+      />
+
+      <Typography variant="h6">Upload position.json</Typography>
+      <ItemWrapper>
+        <div>
+          <label htmlFor="posRecord">posRecord: </label>
+          <input
+            id="posRecord"
+            name="posRecord"
+            type="file"
+            accept=".json"
+            onChange={handlePosRecordInput}
+          />
+        </div>
+        <div>
+          <label htmlFor="controlMap">posMap: </label>
+          <input
+            id="posMap"
+            name="posMap"
+            type="file"
+            accept=".json"
+            onChange={handlePosMapInput}
+          />
+        </div>
+      </ItemWrapper>
+
+      <UploadDownload
+        handleUpload={handlePosUpload}
+        handleDownload={handleDownloadPos}
+      />
+
+      <Typography variant="h6">
+        Upload [name].png <strong>(should select part)</strong>
+      </Typography>
+      <ItemWrapper>
+        <input
+          id="images"
+          name="images"
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleImagesInput}
+        />
+      </ItemWrapper>
+
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: "1vw",
+        }}
+      >
+        <FormControl sx={{ width: "18em" }} focused>
+          <InputLabel id="part-select-label">Part to upload</InputLabel>
+          <Select
+            labelId="part-select-label"
             value={path}
-            variant="outlined"
+            label="Part to upload"
             onChange={handlePathChange}
-            size="small"
           >
             {Object.keys(texture.LEDPARTS).map((name) => (
               <MenuItem key={name} value={name}>
-                {name}
+                <Typography>{name}</Typography>
               </MenuItem>
             ))}
-          </TextField>
+          </Select>
+        </FormControl>
 
-          <Button
-            variant="outlined"
-            color="default"
-            onClick={() => {
-              handleImagesUpload();
-            }}
-          >
-            Upload
-          </Button>
-        </div>
-      </div>
+        <Button variant="outlined" size="small" onClick={handleImagesUpload}>
+          Upload
+        </Button>
+      </Box>
 
-      <br />
       <Divider />
-      <br />
 
-      <Button
-        variant="outlined"
-        color="default"
-        onClick={() => {
-          handleDownloadEverything();
-        }}
-      >
-        Download
-      </Button>
-    </Container>
+      <Box sx={{ display: "flex", justifyContent: "center", px: "30%" }}>
+        <Button
+          variant="outlined"
+          onClick={handleDownloadEverything}
+          size="medium"
+        >
+          Download All
+        </Button>
+      </Box>
+    </Stack>
   );
 }
+
+const ItemWrapper = ({
+  children,
+}: {
+  children: JSX.Element | JSX.Element[];
+}) => {
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "end",
+        pr: "30%",
+        gap: "1vh",
+      }}
+    >
+      {children}
+    </Box>
+  );
+};

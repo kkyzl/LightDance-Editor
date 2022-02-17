@@ -1,7 +1,7 @@
 import { hot } from "react-hot-loader/root";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 // mui
-import { createMuiTheme, ThemeProvider } from "@material-ui/core/styles";
+import { createTheme, ThemeProvider } from "@material-ui/core/styles";
 import CssBaseline from "@material-ui/core/CssBaseline";
 // new mui
 import { createTheme, ThemeProvider } from "@mui/material";
@@ -9,13 +9,18 @@ import { createTheme, ThemeProvider } from "@mui/material";
 import { useSelector, useDispatch } from "react-redux";
 // actions
 import { selectLoad, fetchLoad } from "./slices/loadSlice";
-// layout
-import Layout from "./layout";
-import "./app.css";
 // components
-import Bar from "./components/bar";
+import Header from "components/Header";
+import Loading from "components/Loading";
+// hooks
+import useControl from "hooks/useControl";
+import usePos from "hooks/usePos";
+import { setCurrentPos, setCurrentStatus, setSelected } from "core/actions";
 
-const theme = createMuiTheme({
+import "./app.css";
+import Layout from "containers/Layout";
+
+const theme = createTheme({
   palette: {
     type: "dark",
     primary: {
@@ -43,17 +48,55 @@ const theme = createTheme({ palette: { mode: "dark" } });
 const App = () => {
   const { init } = useSelector(selectLoad);
   const dispatch = useDispatch();
-  useEffect(async () => {
+  const { dancerNames } = useSelector(selectLoad);
+
+  const {
+    loading: controlLoading,
+    error: controlError,
+    controlMap,
+    controlRecord,
+  } = useControl();
+  const { loading: posLoading, error: posError, posMap, posRecord } = usePos();
+
+  useEffect(() => {
     if (!init) {
-      await dispatch(fetchLoad());
+      dispatch(fetchLoad());
     }
   }, [init]);
+
+  useEffect(() => {
+    if (!controlLoading) {
+      if (controlError) console.error(controlError);
+      // init the currentStatus
+      // TODO: check record size and auto generate currentStatus if empty
+      setCurrentStatus({ payload: controlMap[controlRecord[0]].status });
+    }
+  }, [controlLoading, controlError]);
+
+  useEffect(() => {
+    if (!posLoading) {
+      if (posError) console.error(posError);
+      // init the currentPos
+      // TODO: check record size and auto generate currentPos if empty
+      setCurrentPos({ payload: posMap[posRecord[0]].pos });
+    }
+  }, [posLoading, posError]);
+
+  useEffect(() => {
+    if (dancerNames) {
+      const selected: any = {};
+      dancerNames.forEach(
+        (dancer) => (selected[dancer] = { selected: false, parts: [] })
+      );
+      setSelected({ payload: selected });
+    }
+  }, [dancerNames]);
+
   return (
     <div>
       <ThemeProvider theme={theme}>
-        {/* <WebSocketContext> */}
         <CssBaseline />
-        {init ? (
+        {init && !controlLoading && !posLoading ? (
           <div
             style={{
               display: "flex",
@@ -61,15 +104,14 @@ const App = () => {
               height: "100vh",
             }}
           >
-            <Bar />
+            <Header />
             <div style={{ flexGrow: 1, position: "relative" }}>
               <Layout />
             </div>
           </div>
         ) : (
-          "Loading..."
+          <Loading />
         )}
-        {/* </WebSocketContext> */}
       </ThemeProvider>
     </div>
   );

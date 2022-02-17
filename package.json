@@ -36,7 +36,8 @@
     "react-resizable": "^1.11.0",
     "redux": "^4.0.5",
     "wavesurfer.js": "^4.2.0",
-    "ws": "^7.4.3"
+    "ws": "^7.4.3",
+    "yarn": "^1.22.17"
   },
   "scripts": {
     "start": "cross-env NODE_ENV=dev node src/server/app.js",

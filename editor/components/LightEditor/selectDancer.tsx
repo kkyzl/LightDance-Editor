@@ -37,7 +37,6 @@ export default function SelectDancer() {
     }
   });
 
-
   return (
     <div>
       <FormGroup row>

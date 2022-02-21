@@ -1,7 +1,10 @@
 import { hot } from "react-hot-loader/root";
 import { useEffect } from "react";
 // mui
-import { createTheme, ThemeProvider } from "@material-ui/core/styles";
+import {
+  createTheme as obsoleteCreateTheme,
+  ThemeProvider as ObsoleteThemeProvider,
+} from "@material-ui/core/styles";
 import CssBaseline from "@material-ui/core/CssBaseline";
 // new mui
 import { createTheme, ThemeProvider } from "@mui/material";
@@ -10,17 +13,21 @@ import { useSelector, useDispatch } from "react-redux";
 // actions
 import { selectLoad, fetchLoad } from "./slices/loadSlice";
 // components
-import Header from "components/Header";
+import Header from "./components/Header";
+import Clipboard from "components/Clipboard";
 import Loading from "components/Loading";
 // hooks
 import useControl from "hooks/useControl";
 import usePos from "hooks/usePos";
+import useDancer from "hooks/useDancer";
+import useColorMap from 'hooks/useColorMap'
+// states and actions
 import { setCurrentPos, setCurrentStatus, setSelected } from "core/actions";
 
 import "./app.css";
 import Layout from "containers/Layout";
 
-const theme = createTheme({
+const obsoleteTheme = obsoleteCreateTheme({
   palette: {
     type: "dark",
     primary: {
@@ -48,7 +55,12 @@ const theme = createTheme({ palette: { mode: "dark" } });
 const App = () => {
   const { init } = useSelector(selectLoad);
   const dispatch = useDispatch();
-  const { dancerNames } = useSelector(selectLoad);
+
+  const {
+    loading: dancerLoading,
+    error: dancerError,
+    dancerNames,
+  } = useDancer();
 
   const {
     loading: controlLoading,
@@ -57,6 +69,10 @@ const App = () => {
     controlRecord,
   } = useControl();
   const { loading: posLoading, error: posError, posMap, posRecord } = usePos();
+
+  const { loading: colorLoading, error: colorError } = useColorMap();
+  
+  const loading = dancerLoading || controlLoading || posLoading || colorLoading;
 
   useEffect(() => {
     if (!init) {
@@ -94,25 +110,28 @@ const App = () => {
 
   return (
     <div>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        {init && !controlLoading && !posLoading ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              height: "100vh",
-            }}
-          >
-            <Header />
-            <div style={{ flexGrow: 1, position: "relative" }}>
-              <Layout />
+      <ObsoleteThemeProvider theme={obsoleteTheme}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Clipboard />
+          {init && !controlLoading && !posLoading ? (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                height: "100vh",
+              }}
+            >
+              <Header />
+              <div style={{ flexGrow: 1, position: "relative" }}>
+                <Layout />
+              </div>
             </div>
-          </div>
-        ) : (
-          <Loading />
-        )}
-      </ThemeProvider>
+          ) : (
+            <Loading />
+          )}
+        </ThemeProvider>
+      </ObsoleteThemeProvider>
     </div>
   );
 };
